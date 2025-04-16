@@ -40,8 +40,8 @@ Web browser
 **Installation**  
 
 1. Clone this repository:  
-git clone https://github.com/yourusername/Clickhouse-Flatfile-Ingestion.git  
-cd Click house-Flatfile-Ingestion  
+git clone https://github.com/tanika04/Clickhouse-Flatfile-Ingestion  
+cd Clickhouse-Flatfile-Ingestion   
 
 2. Create and activate a virtual environment (optional but recommended):  
 python -m venv venv  
