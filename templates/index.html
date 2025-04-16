@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClickHouse ↔ Flat File Data Ingestion Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+    <h1>ClickHouse ↔ Flat File Data Ingestion Tool</h1>
+
+    <h2>Source Type Selection</h2>
+    <label>Select Source-Target Direction:</label>
+    <select id="sourceSelect" onchange="toggleSourceForms()">
+        <option value="flatfile">Flat File → ClickHouse</option>
+        <option value="clickhouse">ClickHouse → Flat File</option>
+        <option value="join">ClickHouse Multi-Table Join → Flat File</option>
+    </select>
+
+    <div id="flatfileToClickhouse" class="source-form">
+        <h2>Flat File → ClickHouse Ingestion</h2>
+        <div>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div>
+                    <label for="csvFile">Select CSV File:</label>
+                    <input type="file" name="file" id="csvFile" required />
+                </div>
+                <div>
+                    <label for="delimiter">Delimiter:</label>
+                    <input type="text" id="delimiter" placeholder="," value="," required size="3">
+                </div>
+                <button type="submit">Upload & Preview CSV</button>
+            </form>
+        </div>
+
+        <div id="dataPreview" style="display:none;">
+            <h3>Data Preview</h3>
+            <div id="previewContainer"></div>
+        </div>
+
+        <div id="columnSelect" style="display:none;">
+            <h3>Select Columns to Ingest:</h3>
+            <div>
+                <button type="button" onclick="selectAllColumns(true)">Select All</button>
+                <button type="button" onclick="selectAllColumns(false)">Deselect All</button>
+            </div>
+            <div id="columns" class="column-selection"></div>
+
+            <h3>ClickHouse Connection:</h3>
+            <div>
+                <label for="host">Host:</label>
+                <input type="text" id="host" placeholder="localhost" value="b883264lfq.germanywestcentral.azure.clickhouse.cloud">
+            </div>
+            <div>
+                <label for="port">Port:</label>
+                <input type="text" id="port" placeholder="8443" value="8443">
+            </div>
+            <div>
+                <label for="database">Database:</label>
+                <input type="text" id="database" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="user">User:</label>
+                <input type="text" id="user" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="jwt_token">JWT Token:</label>
+                <input type="password" id="jwt_token" value="FAveedH6z8D_b">
+            </div>
+            <div>
+                <label for="target_table">Target Table Name:</label>
+                <input type="text" id="target_table" placeholder="e.g. uploaded_data">
+            </div>
+            <button type="button" onclick="startIngestion()">Ingest to ClickHouse</button>
+
+            <div id="progressSection" style="display:none; margin-top: 20px;">
+                <h3>Ingestion Progress</h3>
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar" style="width:0%">0%</div>
+                </div>
+                <div id="progressDetails">Processing 0 of 0 records</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="clickhouseToFlatfile" class="source-form">
+        <h2>ClickHouse → Flat File Export</h2>
+        <div>
+            <div>
+                <label for="src_host">Host:</label>
+                <input type="text" id="src_host" placeholder="localhost" value="b883264lfq.germanywestcentral.azure.clickhouse.cloud">
+            </div>
+            <div>
+                <label for="src_port">Port:</label>
+                <input type="text" id="src_port" placeholder="8443" value="8443">
+            </div>
+            <div>
+                <label for="src_db">Database:</label>
+                <input type="text" id="src_db" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="src_user">User:</label>
+                <input type="text" id="src_user" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="src_jwt">JWT Token:</label>
+                <input type="password" id="src_jwt" value="FAveedH6z8D_b">
+            </div>
+
+            <button onclick="fetchTables()">Connect & Fetch Tables</button>
+        </div>
+
+        <div id="tablesDropdown" style="display:none; margin-top: 20px;">
+            <div>
+                <label for="src_table">Select Table:</label>
+                <select id="src_table" onchange="loadTableColumns()"></select>
+            </div>
+
+            <div id="tableColumnsSection" style="display:none; margin-top: 20px;">
+                <h3>Select Columns to Export:</h3>
+                <div>
+                    <button type="button" onclick="selectAllSrcColumns(true)">Select All</button>
+                    <button type="button" onclick="selectAllSrcColumns(false)">Deselect All</button>
+                </div>
+                <div id="src_columns" class="column-selection"></div>
+                <button onclick="exportToCSV()">Export to CSV</button>
+
+                <div id="exportProgressSection" style="display:none; margin-top: 20px;">
+                    <h3>Export Progress</h3>
+                    <div class="progress-container">
+                        <div id="exportProgressBar" class="progress-bar" style="width:0%">0%</div>
+                    </div>
+                    <div id="exportProgressDetails">Processing...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="multiTableJoin" class="source-form">
+        <h2>ClickHouse Multi-Table Join → Flat File</h2>
+        <div>
+            <div>
+                <label for="join_host">Host:</label>
+                <input type="text" id="join_host" placeholder="localhost" value="b883264lfq.germanywestcentral.azure.clickhouse.cloud">
+            </div>
+            <div>
+                <label for="join_port">Port:</label>
+                <input type="text" id="join_port" placeholder="8443" value="8443">
+            </div>
+            <div>
+                <label for="join_db">Database:</label>
+                <input type="text" id="join_db" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="join_user">User:</label>
+                <input type="text" id="join_user" placeholder="default" value="default">
+            </div>
+            <div>
+                <label for="join_jwt">JWT Token:</label>
+                <input type="password" id="join_jwt" value="FAveedH6z8D_b">
+            </div>
+
+            <button onclick="fetchJoinTables()">Connect & Fetch Tables</button>
+        </div>
+
+        <div id="joinTablesSection" style="display:none; margin-top: 20px;">
+            <h3>Configure Join</h3>
+
+            <div id="selectedTablesSection">
+                <h4>Selected Tables</h4>
+                <div id="selectedTables" class="column-selection">
+                    <p>No tables selected yet. Please select tables from the list below.</p>
+                </div>
+
+                <div>
+                    <label for="join_available_tables">Available Tables:</label>
+                    <select id="join_available_tables"></select>
+                    <button onclick="addTableToJoin()">Add Table</button>
+                </div>
+            </div>
+
+            <div id="joinConditionsSection" style="display:none; margin-top: 20px;">
+                <h4>Join Conditions</h4>
+                <div id="joinConditionsContainer"></div>
+                <button id="configureJoinBtn" onclick="configureJoinColumns()" style="display:none;">Configure Join
+                    Columns</button>
+            </div>
+
+            <div id="joinColumnsSection" style="display:none; margin-top: 20px;">
+                <h4>Select Columns for Export</h4>
+                <div>
+                    <button type="button" onclick="selectAllJoinColumns(true)">Select All</button>
+                    <button type="button" onclick="selectAllJoinColumns(false)">Deselect All</button>
+                </div>
+                <div id="joinColumns" class="column-selection"></div>
+
+                <div>
+                    <label for="join_export_filename">Export Filename:</label>
+                    <input type="text" id="join_export_filename" value="joined_export.csv">
+                </div>
+
+                <button onclick="executeJoin()">Execute Join & Export to CSV</button>
+
+                <div id="joinProgressSection" style="display:none; margin-top: 20px;">
+                    <h3>Join Progress</h3>
+                    <div class="progress-container">
+                        <div id="joinProgressBar" class="progress-bar" style="width:0%">0%</div>
+                    </div>
+                    <div id="joinProgressDetails">Processing...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="status"></div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+
+</html>

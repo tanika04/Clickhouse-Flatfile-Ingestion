@@ -1,0 +1,9 @@
+# Write a function that dynamically creates a ClickHouse table schema based on CSV column data types.
+
+# How to execute JOIN queries programmatically in ClickHouse with user-defined join conditions?
+
+# How to implement error handling between Flask backend and JavaScript frontend for data ingestion processes
+
+# How to implement efficient batch processing in Python for transferring large datasets from CSV to ClickHouse?
+
+# Implement progress tracking for a long-running data ingestion process between Flask backend and JavaScript frontend
